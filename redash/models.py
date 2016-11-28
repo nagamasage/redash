@@ -32,6 +32,9 @@ from sqlalchemy.orm import backref, joinedload, object_session, subqueryload
 from sqlalchemy.orm.exc import NoResultFound  # noqa: F401
 from sqlalchemy.types import TypeDecorator
 
+from croniter import croniter
+
+
 db = SQLAlchemy(session_options={
     'expire_on_commit': False
 })
@@ -718,25 +721,14 @@ class QueryResult(db.Model, BelongsToOrgMixin):
 
 
 def should_schedule_next(previous_iteration, now, schedule, failures):
-    if schedule.isdigit():
-        ttl = int(schedule)
-        next_iteration = previous_iteration + datetime.timedelta(seconds=ttl)
-    else:
-        hour, minute = schedule.split(':')
-        hour, minute = int(hour), int(minute)
+    if schedule is None or not schedule:
+        return False
 
-        # The following logic is needed for cases like the following:
-        # - The query scheduled to run at 23:59.
-        # - The scheduler wakes up at 00:01.
-        # - Using naive implementation of comparing timestamps, it will skip the execution.
-        normalized_previous_iteration = previous_iteration.replace(hour=hour, minute=minute)
-        if normalized_previous_iteration > previous_iteration:
-            previous_iteration = normalized_previous_iteration - datetime.timedelta(days=1)
+    future_dates = croniter(schedule, previous_iteration + datetime.timedelta(hours=9))
+    next_iteration = future_dates.get_next(datetime.datetime)
+    now_jst = now + datetime.timedelta(hours=9)
 
-        next_iteration = (previous_iteration + datetime.timedelta(days=1)).replace(hour=hour, minute=minute)
-    if failures:
-        next_iteration += datetime.timedelta(minutes=2**failures)
-    return now > next_iteration
+    return now_jst > next_iteration
 
 
 class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
@@ -770,6 +762,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
         "version_id_col": version,
         'version_id_generator': False
     }
+
 
     def to_dict(self, with_stats=False, with_visualizations=False, with_user=True, with_last_modified_by=True):
         d = {
