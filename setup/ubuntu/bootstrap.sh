@@ -12,7 +12,7 @@ LATEST_URL="https://github.com/getredash/redash/releases/download/v${REDASH_VERS
 VERSION_DIR="/opt/redash/redash.${REDASH_VERSION}"
 REDASH_TARBALL=/tmp/redash.tar.gz
 
-FILES_BASE_URL=https://raw.githubusercontent.com/getredash/redash/${REDASH_BRANCH}/setup/ubuntu/files/
+FILES_BASE_URL=https://raw.githubusercontent.com/nagamasage/redash/${REDASH_BRANCH}/setup/ubuntu/files/
 
 # Verify running as root:
 if [ "$(id -u)" != "0" ]; then
@@ -27,7 +27,7 @@ fi
 
 # Base packages
 apt-get -y update
-DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
+#DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
 apt-get install -y python-pip python-dev nginx curl build-essential pwgen
 # BigQuery dependencies:
 apt-get install -y libffi-dev libssl-dev
