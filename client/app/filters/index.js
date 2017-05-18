@@ -103,7 +103,7 @@ const humanizeCron = (schedule) => {
 };
 
 export function scheduleHumanize(schedule) {
-  if (schedule === '') {
+  if (schedule === '' || schedule === null) {
     return 'Never';
   } else if (schedule.split(' ').length === 5) {
     return humanizeCron(schedule);
