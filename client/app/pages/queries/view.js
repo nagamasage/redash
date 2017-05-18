@@ -322,17 +322,24 @@ function QueryViewCtrl($scope, Events, $route, $routeParams, $location, $window,
     $scope.openVisualizationEditor();
   }
 
+  $scope.updateQuerySchedule = (schedule) => {
+    $scope.query.schedule = schedule;
+    $scope.saveQuery();
+  };
+
+  $scope.$watch('query.schedule', () => {
+  });
+
   $scope.openScheduleForm = () => {
     if (!$scope.isQueryOwner || !$scope.canScheduleQuery) {
       return;
     }
-
     $uibModal.open({
       component: 'scheduleDialog',
-      size: 'sm',
-      resolve: {
-        query: $scope.query,
-        saveQuery: () => $scope.saveQuery,
+      size: 'md',
+      resolve: { // Previous resolve property (I assume)
+        schedule: () => $scope.query.schedule,
+        callback: () => $scope.updateQuerySchedule,
       },
     });
   };

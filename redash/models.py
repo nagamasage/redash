@@ -1,3 +1,5 @@
+import re
+from croniter import croniter
 import datetime
 import functools
 import hashlib
@@ -686,7 +688,7 @@ def should_schedule_next(previous_iteration, now, schedule, failures):
     if schedule.isdigit():
         ttl = int(schedule)
         next_iteration = previous_iteration + datetime.timedelta(seconds=ttl)
-    else:
+    elif ":" in schedule:
         hour, minute = schedule.split(':')
         hour, minute = int(hour), int(minute)
 
@@ -699,10 +701,11 @@ def should_schedule_next(previous_iteration, now, schedule, failures):
             previous_iteration = normalized_previous_iteration - datetime.timedelta(days=1)
 
         next_iteration = (previous_iteration + datetime.timedelta(days=1)).replace(hour=hour, minute=minute)
-    if failures:
-        next_iteration += datetime.timedelta(minutes=2**failures)
-    return now > next_iteration
+    else:
+        future_dates = croniter(schedule, previous_iteration)
+        next_iteration = future_dates.get_next(datetime.datetime)
 
+    return now > next_iteration
 
 class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     id = Column(db.Integer, primary_key=True)
