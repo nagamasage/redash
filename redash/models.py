@@ -685,6 +685,9 @@ class QueryResult(db.Model, BelongsToOrgMixin):
 
 
 def should_schedule_next(previous_iteration, now, schedule, failures):
+    if schedule is None or not schedule:
+        return False
+
     if schedule.isdigit():
         ttl = int(schedule)
         next_iteration = previous_iteration + datetime.timedelta(seconds=ttl)
@@ -728,7 +731,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
                                        foreign_keys=[last_modified_by_id])
     is_archived = Column(db.Boolean, default=False, index=True)
     is_draft = Column(db.Boolean, default=True, index=True)
-    schedule = Column(db.String(10), nullable=True)
+    schedule = Column(db.Text, nullable=True)
     schedule_failures = Column(db.Integer, default=0)
     visualizations = db.relationship("Visualization", cascade="all, delete-orphan")
     options = Column(MutableDict.as_mutable(PseudoJSON), default={})
