@@ -855,7 +855,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     def outdated_queries(cls):
         queries = (db.session.query(Query)
                    .options(joinedload(Query.latest_query_data).load_only('retrieved_at'))
-                   .filter(Query.schedule != None)
+                   .filter(Query.schedule != None, Query.data_source_id != None)
                    .order_by(Query.id))
 
         now = utils.utcnow()
@@ -873,7 +873,6 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
             if should_schedule_next(retrieved_at, now, query.schedule, query.schedule_failures):
                 key = "{}:{}".format(query.query_hash, query.data_source_id)
                 outdated_queries[key] = query
-
         return outdated_queries.values()
 
     @classmethod
