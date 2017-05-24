@@ -688,27 +688,12 @@ def should_schedule_next(previous_iteration, now, schedule, failures):
     if schedule is None or not schedule:
         return False
 
-    if schedule.isdigit():
-        ttl = int(schedule)
-        next_iteration = previous_iteration + datetime.timedelta(seconds=ttl)
-    elif ":" in schedule:
-        hour, minute = schedule.split(':')
-        hour, minute = int(hour), int(minute)
+    future_dates = croniter(schedule, previous_iteration + datetime.timedelta(hours=9))
+    next_iteration = future_dates.get_next(datetime.datetime)
+    now_jst = now + datetime.timedelta(hours=9)
 
-        # The following logic is needed for cases like the following:
-        # - The query scheduled to run at 23:59.
-        # - The scheduler wakes up at 00:01.
-        # - Using naive implementation of comparing timestamps, it will skip the execution.
-        normalized_previous_iteration = previous_iteration.replace(hour=hour, minute=minute)
-        if normalized_previous_iteration > previous_iteration:
-            previous_iteration = normalized_previous_iteration - datetime.timedelta(days=1)
+    return now_jst > next_iteration
 
-        next_iteration = (previous_iteration + datetime.timedelta(days=1)).replace(hour=hour, minute=minute)
-    else:
-        future_dates = croniter(schedule, previous_iteration)
-        next_iteration = future_dates.get_next(datetime.datetime)
-
-    return now > next_iteration
 
 class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     id = Column(db.Integer, primary_key=True)
@@ -833,7 +818,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     def outdated_queries(cls):
         queries = (db.session.query(Query)
                    .options(joinedload(Query.latest_query_data).load_only('retrieved_at'))
-                   .filter(Query.schedule != None)
+                   .filter(Query.schedule != None, Query.data_source_id != None)
                    .order_by(Query.id))
 
         now = utils.utcnow()
@@ -847,7 +832,6 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
             if should_schedule_next(retrieved_at, now, query.schedule, query.schedule_failures):
                 key = "{}:{}".format(query.query_hash, query.data_source_id)
                 outdated_queries[key] = query
-
         return outdated_queries.values()
 
     @classmethod
