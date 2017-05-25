@@ -692,6 +692,9 @@ def should_schedule_next(previous_iteration, now, schedule, failures):
     next_iteration = future_dates.get_next(datetime.datetime)
     now_jst = now + datetime.timedelta(hours=9)
 
+    if failures:
+        next_iteration += datetime.timedelta(minutes=2**failures)
+
     return now_jst > next_iteration
 
 
