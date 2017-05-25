@@ -685,17 +685,35 @@ class QueryResult(db.Model, BelongsToOrgMixin):
 
 
 def should_schedule_next(previous_iteration, now, schedule, failures):
+
     if schedule is None or not schedule:
         return False
 
-    future_dates = croniter(schedule, previous_iteration + datetime.timedelta(hours=9))
-    next_iteration = future_dates.get_next(datetime.datetime)
-    now_jst = now + datetime.timedelta(hours=9)
+    if schedule.isdigit():
+        ttl = int(schedule)
+        next_iteration = previous_iteration + datetime.timedelta(seconds=ttl)
+    elif ":" in schedule:
+        hour, minute = schedule.split(':')
+        hour, minute = int(hour), int(minute)
+
+        # The following logic is needed for cases like the following:
+        # - The query scheduled to run at 23:59.
+        # - The scheduler wakes up at 00:01.
+        # - Using naive implementation of comparing timestamps, it will skip the execution.
+        normalized_previous_iteration = previous_iteration.replace(hour=hour, minute=minute)
+        if normalized_previous_iteration > previous_iteration:
+            previous_iteration = normalized_previous_iteration - datetime.timedelta(days=1)
+
+        next_iteration = (previous_iteration + datetime.timedelta(days=1)).replace(hour=hour, minute=minute)
+    else:
+        future_dates = croniter(schedule, previous_iteration + datetime.timedelta(hours=9))
+        now += datetime.timedelta(hours=9)
+        next_iteration = future_dates.get_next(datetime.datetime)
 
     if failures:
         next_iteration += datetime.timedelta(minutes=2**failures)
 
-    return now_jst > next_iteration
+    return now > next_iteration
 
 
 class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
