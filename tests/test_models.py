@@ -27,6 +27,95 @@ class DashboardTest(BaseTestCase):
 
 
 class ShouldScheduleNextTest(TestCase):
+    def test_cron_like_schedule_day_of_month_that_needs_reschedule(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-04-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-25 01:00:01")
+        self.assertTrue(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_day_ago(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-04-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-24 01:00:01")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_day_later(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-26 01:00:01")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_hour_ago(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-04-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-25 00:00:01")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_hour_later(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-25 02:00:01")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_minute_ago(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-04-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-25 00:59:00")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_month_that_dosent_need_reschedule_1_minute_later(self):
+        # at 10:00 on the 25th day of month
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "0 10 25 * *"
+        now = date_parse("2017-05-25 01:01:00")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_week_that_needs_reschedule(self):
+        # Every Wednesday and Thursday at 10:00
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "00 10 * * 3,4"
+        now = date_parse("2017-05-31 01:00:01")
+        self.assertTrue(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_week_that_dosent_need_reschedule_1_day_ago(self):
+        # Every Wednesday and Thursday at 10:00
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "00 10 * * 3,4"
+        now = date_parse("2017-05-30 01:00:00")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_week_that_dosent_need_reschedule_1_hour_ago(self):
+        # Every Wednesday and Thursday at 10:00
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "00 10 * * 3,4"
+        now = date_parse("2017-05-31 00:00:00")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_day_of_week_that_dosent_need_reschedule_1_minute_ago(self):
+        # Every Wednesday and Thursday at 10:00
+        previous_iteration = date_parse("2017-05-25 01:00")
+        schedule = "00 10 * * 3,4"
+        now = date_parse("2017-05-31 00:59:00")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_every_minute_that_needs_reschedule(self):
+        previous_iteration = date_parse("2017-05-25 01:00:00")
+        schedule = "* * * * *"
+        now = date_parse("2017-05-25 01:01:01")
+        self.assertTrue(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
+    def test_cron_like_schedule_every_minute_that_dosent_need_reschedule(self):
+        previous_iteration = date_parse("2017-05-25 01:00:00")
+        schedule = "* * * * *"
+        now = date_parse("2017-05-25 01:00:59")
+        self.assertFalse(models.should_schedule_next(previous_iteration, now, schedule, 0))
+
     def test_interval_schedule_that_needs_reschedule(self):
         now = utcnow()
         two_hours_ago = now - datetime.timedelta(hours=2)
@@ -450,7 +539,7 @@ class TestQueryResultStoreResult(BaseTestCase):
         query_result, _ = models.QueryResult.store_result(
             self.data_source.org, self.data_source, self.query_hash,
             self.query, self.data, self.runtime, self.utcnow)
-        
+
         self.assertEqual(query1.latest_query_data, query_result)
         self.assertEqual(query2.latest_query_data, query_result)
         self.assertNotEqual(query3.latest_query_data, query_result)
